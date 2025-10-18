@@ -1,11 +1,11 @@
 import { Response } from 'express';
 import { supabase } from '@/config/supabase';
 import { AuthenticatedRequest } from '@/middleware/auth';
-import { 
-  validationError, 
-  authError, 
-  notFoundError, 
-  serverError 
+import {
+  validationError,
+  authError,
+  notFoundError,
+  createError as createErrorInstance
 } from '@/middleware/errorHandler';
 import { logger } from '@/utils/logger';
 
@@ -92,7 +92,7 @@ export const createRide = async (req: AuthenticatedRequest, res: Response): Prom
 
     if (error) {
       logger.error('Failed to create ride:', error);
-      throw serverError('Failed to create ride');
+      throw createErrorInstance('Failed to create ride', 500);
     }
 
     logger.info('Ride created', { rideId: ride.id, passengerId: userId });
@@ -132,7 +132,7 @@ export const getUserRides = async (req: AuthenticatedRequest, res: Response): Pr
 
     if (error) {
       logger.error('Failed to fetch rides:', error);
-      throw serverError('Failed to fetch rides');
+      throw createErrorInstance('Failed to fetch rides', 500);
     }
 
     res.status(200).json({
@@ -229,7 +229,7 @@ export const updateRideStatus = async (req: AuthenticatedRequest, res: Response)
 
     if (updateError) {
       logger.error('Failed to update ride:', updateError);
-      throw serverError('Failed to update ride');
+      throw createErrorInstance('Failed to update ride', 500);
     }
 
     logger.info('Ride status updated', { rideId, newStatus: status });
@@ -289,7 +289,7 @@ export const cancelRide = async (req: AuthenticatedRequest, res: Response): Prom
 
     if (updateError) {
       logger.error('Failed to cancel ride:', updateError);
-      throw serverError('Failed to cancel ride');
+      throw createErrorInstance('Failed to cancel ride', 500);
     }
 
     logger.info('Ride cancelled', { rideId, cancelledBy: userId });

@@ -26,6 +26,11 @@ import rideRoutes from '@/routes/rides';
 import vehicleRoutes from '@/routes/vehicles';
 import paymentRoutes from '@/routes/payments';
 import notificationRoutes from '@/routes/notifications';
+import driverRoutes from '@/routes/drivers';
+import walletRoutes from '@/routes/wallet';
+import bidRoutes from '@/routes/bids';
+import adminRoutes from '@/routes/admin';
+import mapRoutes from '@/routes/maps';
 
 // Import socket handlers
 import { initializeSocketHandlers } from '@/services/socketService';
@@ -123,6 +128,11 @@ app.use(`/api/${API_VERSION}/rides`, rideRoutes);
 app.use(`/api/${API_VERSION}/vehicles`, vehicleRoutes);
 app.use(`/api/${API_VERSION}/payments`, paymentRoutes);
 app.use(`/api/${API_VERSION}/notifications`, notificationRoutes);
+app.use(`/api/${API_VERSION}/drivers`, driverRoutes);
+app.use(`/api/${API_VERSION}/wallet`, walletRoutes);
+app.use(`/api/${API_VERSION}/bids`, bidRoutes);
+app.use(`/api/${API_VERSION}/admin`, adminRoutes);
+app.use(`/api/${API_VERSION}/maps`, mapRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {

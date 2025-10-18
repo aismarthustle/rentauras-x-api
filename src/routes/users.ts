@@ -3,6 +3,7 @@ import { Response } from 'express';
 import { authenticateToken, requireAdmin } from '@/middleware/auth';
 import { asyncHandler } from '@/middleware/errorHandler';
 import { AuthenticatedRequest } from '@/middleware/auth';
+import { supabase } from '@/config/supabase';
 
 const router = express.Router();
 
@@ -47,8 +48,45 @@ const router = express.Router();
 router.get('/',
   authenticateToken,
   requireAdmin,
-  asyncHandler(async (_req: AuthenticatedRequest, res: Response) => {
-    res.status(501).json({ message: 'Not implemented yet' });
+  asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const { role, status, limit = '20', offset = '0' } = req.query;
+
+    try {
+      let query = supabase
+        .from('users')
+        .select('*', { count: 'exact' })
+        .order('created_at', { ascending: false })
+        .range(parseInt(offset as string), parseInt(offset as string) + parseInt(limit as string) - 1);
+
+      if (role && ['passenger', 'driver', 'admin'].includes(role as string)) {
+        query = query.eq('role', role);
+      }
+
+      if (status && ['active', 'inactive', 'suspended'].includes(status as string)) {
+        query = query.eq('status', status);
+      }
+
+      const { data: users, error, count } = await query;
+
+      if (error) {
+        res.status(500).json({ error: 'Failed to fetch users' });
+        return;
+      }
+
+      res.status(200).json({
+        success: true,
+        data: {
+          users: users || [],
+          pagination: {
+            total: count || 0,
+            limit: parseInt(limit as string),
+            offset: parseInt(offset as string)
+          }
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ error: 'Internal server error' });
+    }
   })
 );
 
@@ -98,8 +136,40 @@ router.get('/',
 // Get user by ID
 router.get('/:id',
   authenticateToken,
-  asyncHandler(async (_req: AuthenticatedRequest, res: Response) => {
-    res.status(501).json({ message: 'Not implemented yet' });
+  asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const { id } = req.params;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      res.status(401).json({ error: 'User not authenticated' });
+      return;
+    }
+
+    try {
+      const { data: user, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error || !user) {
+        res.status(404).json({ error: 'User not found' });
+        return;
+      }
+
+      // Users can view their own profile or admins can view any profile
+      if (user.id !== userId && req.user?.role !== 'admin') {
+        res.status(403).json({ error: 'Unauthorized to view this user profile' });
+        return;
+      }
+
+      res.status(200).json({
+        success: true,
+        data: { user }
+      });
+    } catch (error) {
+      res.status(500).json({ error: 'Internal server error' });
+    }
   })
 );
 

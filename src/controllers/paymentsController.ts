@@ -1,11 +1,11 @@
 import { Response } from 'express';
 import { supabase } from '@/config/supabase';
 import { AuthenticatedRequest } from '@/middleware/auth';
-import { 
-  validationError, 
-  authError, 
-  notFoundError, 
-  serverError 
+import {
+  validationError,
+  authError,
+  notFoundError,
+  createError as createErrorInstance
 } from '@/middleware/errorHandler';
 import { logger } from '@/utils/logger';
 
@@ -33,7 +33,7 @@ export const getPaymentHistory = async (req: AuthenticatedRequest, res: Response
 
     if (error) {
       logger.error('Failed to fetch payments:', error);
-      throw serverError('Failed to fetch payment history');
+      throw createErrorInstance('Failed to fetch payment history', 500);
     }
 
     res.status(200).json({
@@ -81,7 +81,7 @@ export const getWalletBalance = async (req: AuthenticatedRequest, res: Response)
 
       if (createError) {
         logger.error('Failed to create wallet:', createError);
-        throw serverError('Failed to get wallet balance');
+        throw createErrorInstance('Failed to get wallet balance', 500);
       }
 
       res.status(200).json({
@@ -134,7 +134,7 @@ export const addWalletFunds = async (req: AuthenticatedRequest, res: Response): 
 
     if (paymentError) {
       logger.error('Failed to create payment:', paymentError);
-      throw serverError('Failed to process payment');
+      throw createErrorInstance('Failed to process payment', 500);
     }
 
     logger.info('Wallet top-up initiated', { userId, amount, paymentMethod: payment_method });
@@ -201,7 +201,7 @@ export const processRidePayment = async (req: AuthenticatedRequest, res: Respons
 
     if (paymentError) {
       logger.error('Failed to create payment:', paymentError);
-      throw serverError('Failed to process payment');
+      throw createErrorInstance('Failed to process payment', 500);
     }
 
     // If payment method is wallet, deduct from wallet
@@ -281,7 +281,7 @@ export const getWalletTransactions = async (req: AuthenticatedRequest, res: Resp
 
     if (error) {
       logger.error('Failed to fetch transactions:', error);
-      throw serverError('Failed to fetch transactions');
+      throw createErrorInstance('Failed to fetch transactions', 500);
     }
 
     res.status(200).json({

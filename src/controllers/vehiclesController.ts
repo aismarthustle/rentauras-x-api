@@ -1,11 +1,11 @@
 import { Response } from 'express';
 import { supabase } from '@/config/supabase';
 import { AuthenticatedRequest } from '@/middleware/auth';
-import { 
-  validationError, 
-  authError, 
-  notFoundError, 
-  serverError 
+import {
+  validationError,
+  authError,
+  notFoundError,
+  createError as createErrorInstance
 } from '@/middleware/errorHandler';
 import { logger } from '@/utils/logger';
 
@@ -75,7 +75,7 @@ export const createVehicle = async (req: AuthenticatedRequest, res: Response): P
 
     if (error) {
       logger.error('Failed to create vehicle:', error);
-      throw serverError('Failed to create vehicle');
+      throw createErrorInstance('Failed to create vehicle', 500);
     }
 
     logger.info('Vehicle created', { vehicleId: vehicle.id, driverId: userId });
@@ -114,7 +114,7 @@ export const getDriverVehicles = async (req: AuthenticatedRequest, res: Response
 
     if (error) {
       logger.error('Failed to fetch vehicles:', error);
-      throw serverError('Failed to fetch vehicles');
+      throw createErrorInstance('Failed to fetch vehicles', 500);
     }
 
     res.status(200).json({
@@ -199,7 +199,7 @@ export const updateVehicle = async (req: AuthenticatedRequest, res: Response): P
 
     if (updateError) {
       logger.error('Failed to update vehicle:', updateError);
-      throw serverError('Failed to update vehicle');
+      throw createErrorInstance('Failed to update vehicle', 500);
     }
 
     logger.info('Vehicle updated', { vehicleId });
@@ -247,7 +247,7 @@ export const deleteVehicle = async (req: AuthenticatedRequest, res: Response): P
 
     if (deleteError) {
       logger.error('Failed to delete vehicle:', deleteError);
-      throw serverError('Failed to delete vehicle');
+      throw createErrorInstance('Failed to delete vehicle', 500);
     }
 
     logger.info('Vehicle deleted', { vehicleId });

@@ -3,6 +3,7 @@ import { authenticateToken } from '@/middleware/auth';
 import { asyncHandler } from '@/middleware/errorHandler';
 import { AuthenticatedRequest } from '@/middleware/auth';
 import { Response } from 'express';
+import { supabase } from '@/config/supabase';
 
 const router = express.Router();
 
@@ -81,8 +82,48 @@ const router = express.Router();
 // Get payment history
 router.get('/',
   authenticateToken,
-  asyncHandler(async (_req: AuthenticatedRequest, res: Response) => {
-    res.status(501).json({ message: 'Not implemented yet' });
+  asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const userId = req.user?.id;
+    const { status, limit = '20', offset = '0' } = req.query;
+
+    if (!userId) {
+      res.status(401).json({ error: 'User not authenticated' });
+      return;
+    }
+
+    try {
+      let query = supabase
+        .from('payments')
+        .select('*', { count: 'exact' })
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .range(parseInt(offset as string), parseInt(offset as string) + parseInt(limit as string) - 1);
+
+      if (status && ['pending', 'completed', 'failed', 'refunded'].includes(status as string)) {
+        query = query.eq('status', status);
+      }
+
+      const { data: payments, error, count } = await query;
+
+      if (error) {
+        res.status(500).json({ error: 'Failed to fetch payments' });
+        return;
+      }
+
+      res.status(200).json({
+        success: true,
+        data: {
+          payments: payments || [],
+          pagination: {
+            total: count || 0,
+            limit: parseInt(limit as string),
+            offset: parseInt(offset as string)
+          }
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ error: 'Internal server error' });
+    }
   })
 );
 
@@ -169,8 +210,87 @@ router.get('/',
 // Process payment
 router.post('/',
   authenticateToken,
-  asyncHandler(async (_req: AuthenticatedRequest, res: Response) => {
-    res.status(501).json({ message: 'Not implemented yet' });
+  asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const userId = req.user?.id;
+    const { ride_id, amount, payment_method, tip } = req.body;
+
+    if (!userId) {
+      res.status(401).json({ error: 'User not authenticated' });
+      return;
+    }
+
+    if (!ride_id || !amount || !payment_method) {
+      res.status(400).json({ error: 'Missing required fields' });
+      return;
+    }
+
+    if (!['card', 'wallet', 'bank_transfer'].includes(payment_method)) {
+      res.status(400).json({ error: 'Invalid payment method' });
+      return;
+    }
+
+    try {
+      // Verify ride exists and belongs to user
+      const { data: ride, error: rideError } = await supabase
+        .from('rides')
+        .select('*')
+        .eq('id', ride_id)
+        .single();
+
+      if (rideError || !ride) {
+        res.status(404).json({ error: 'Ride not found' });
+        return;
+      }
+
+      if (ride.passenger_id !== userId && req.user?.role !== 'admin') {
+        res.status(403).json({ error: 'Unauthorized to pay for this ride' });
+        return;
+      }
+
+      // Create payment record
+      const totalAmount = amount + (tip || 0);
+      const { data: payment, error: paymentError } = await supabase
+        .from('payments')
+        .insert({
+          ride_id,
+          user_id: userId,
+          amount: totalAmount,
+          payment_method,
+          status: 'completed',
+          transaction_id: `TXN_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          metadata: {
+            tip: tip || 0,
+            base_amount: amount,
+            payment_date: new Date().toISOString()
+          }
+        })
+        .select()
+        .single();
+
+      if (paymentError) {
+        res.status(500).json({ error: 'Failed to process payment' });
+        return;
+      }
+
+      // Update ride payment status
+      await supabase
+        .from('rides')
+        .update({ payment_status: 'completed', final_price: totalAmount })
+        .eq('id', ride_id);
+
+      res.status(200).json({
+        success: true,
+        message: 'Payment processed successfully',
+        data: {
+          payment_id: payment.id,
+          status: payment.status,
+          transaction_id: payment.transaction_id,
+          amount: totalAmount
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ error: 'Internal server error' });
+    }
   })
 );
 
