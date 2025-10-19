@@ -23,7 +23,7 @@ const options: swaggerJsdoc.Options = {
     servers: [
       {
         url: NODE_ENV === 'production' 
-          ? 'https://api.rentauras.ma' 
+          ? 'https://rentauras-x-api.vercel.app' 
           : `http://localhost:${PORT}`,
         description: NODE_ENV === 'production' ? 'Production server' : 'Development server'
       }

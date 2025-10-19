@@ -81,7 +81,7 @@ npm run dev
 ### Environment Configuration
 The Swagger config automatically detects your environment:
 - **Development**: `http://localhost:3000`
-- **Production**: `https://api.rentauras.ma`
+- **Production**: `https://rentauras-x-api.vercel.app`
 
 ### Custom Styling
 The Swagger UI includes custom CSS for Rentauras X branding:

@@ -280,7 +280,7 @@ node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
 
 Once your server is running, access the interactive API documentation at:
 - **Development**: `http://localhost:3000/api-docs`
-- **Production**: `https://api.rentauras.ma/api-docs`
+- **Production**: `https://rentauras-x-api.vercel.app/api-docs`
 
 The Swagger UI provides:
 - ✅ Interactive API testing
