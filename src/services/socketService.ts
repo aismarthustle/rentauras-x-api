@@ -77,11 +77,13 @@ export const initializeSocketHandlers = (io: SocketIOServer): void => {
     // Driver-specific handlers
     if (userRole === 'driver') {
       handleDriverEvents(socket, userId);
+      handleBidEvents(socket, userId);
     }
 
     // Passenger-specific handlers
     if (userRole === 'passenger') {
       handlePassengerEvents(socket, userId);
+      handleBidEvents(socket, userId);
     }
 
     // Admin-specific handlers
@@ -160,11 +162,11 @@ const handleDriverEvents = (socket: AuthenticatedSocket, userId: string): void =
   socket.on('driver:accept_ride', async (data: { rideId: string }) => {
     try {
       const { rideId } = data;
-      
+
       // Update ride status
       const { data: ride, error } = await supabase
         .from('rides')
-        .update({ 
+        .update({
           driver_id: userId,
           status: 'accepted',
           updated_at: new Date().toISOString()
@@ -198,6 +200,98 @@ const handleDriverEvents = (socket: AuthenticatedSocket, userId: string): void =
     } catch (error) {
       logger.error('Failed to accept ride:', error);
       socket.emit('error', { message: 'Failed to accept ride' });
+    }
+  });
+
+  // Start ride
+  socket.on('driver:start_ride', async (data: { rideId: string }) => {
+    try {
+      const { rideId } = data;
+
+      // Update ride status to started
+      const { data: ride, error } = await supabase
+        .from('rides')
+        .update({
+          status: 'started',
+          started_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', rideId)
+        .eq('driver_id', userId)
+        .eq('status', 'accepted')
+        .select('*, passenger:users!rides_passenger_id_fkey(id)')
+        .single();
+
+      if (error || !ride) {
+        socket.emit('error', { message: 'Failed to start ride or ride not found' });
+        return;
+      }
+
+      // Notify passenger
+      socket.to(`user:${ride.passenger_id}`).emit('ride:started', {
+        rideId,
+        driverId: userId,
+        startedAt: ride.started_at
+      });
+
+      // Notify admin
+      socket.to('role:admin').emit('ride:started', {
+        rideId,
+        driverId: userId,
+        passengerId: ride.passenger_id
+      });
+
+      socket.emit('ride:started', { rideId });
+      logger.info('Ride started by driver', { userId, rideId });
+    } catch (error) {
+      logger.error('Failed to start ride:', error);
+      socket.emit('error', { message: 'Failed to start ride' });
+    }
+  });
+
+  // Complete ride
+  socket.on('driver:complete_ride', async (data: { rideId: string }) => {
+    try {
+      const { rideId } = data;
+
+      // Update ride status to completed
+      const { data: ride, error } = await supabase
+        .from('rides')
+        .update({
+          status: 'completed',
+          completed_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', rideId)
+        .eq('driver_id', userId)
+        .eq('status', 'started')
+        .select('*, passenger:users!rides_passenger_id_fkey(id)')
+        .single();
+
+      if (error || !ride) {
+        socket.emit('error', { message: 'Failed to complete ride or ride not found' });
+        return;
+      }
+
+      // Notify passenger
+      socket.to(`user:${ride.passenger_id}`).emit('ride:completed', {
+        rideId,
+        driverId: userId,
+        completedAt: ride.completed_at
+      });
+
+      // Notify admin
+      socket.to('role:admin').emit('ride:completed', {
+        rideId,
+        driverId: userId,
+        passengerId: ride.passenger_id
+      });
+
+      socket.emit('ride:completed', { rideId });
+      logger.info('Ride completed by driver', { userId, rideId });
+    } catch (error) {
+      logger.error('Failed to complete ride:', error);
+      socket.emit('error', { message: 'Failed to complete ride' });
     }
   });
 };
@@ -270,6 +364,118 @@ const handlePassengerEvents = (socket: AuthenticatedSocket, userId: string): voi
     } catch (error) {
       logger.error('Failed to cancel ride:', error);
       socket.emit('error', { message: 'Failed to cancel ride' });
+    }
+  });
+};
+
+const handleBidEvents = (socket: AuthenticatedSocket, userId: string): void => {
+  // Place new bid
+  socket.on('bid:place', async (data: { rideId: string; amount: number }) => {
+    try {
+      const { rideId, amount } = data;
+
+      if (typeof amount !== 'number' || amount <= 0) {
+        socket.emit('error', { message: 'Invalid bid amount' });
+        return;
+      }
+
+      // Create bid in database
+      const { data: bid, error } = await supabase
+        .from('bids')
+        .insert({
+          ride_id: rideId,
+          driver_id: userId,
+          amount,
+          status: 'pending'
+        })
+        .select()
+        .single();
+
+      if (error) {
+        socket.emit('error', { message: 'Failed to place bid' });
+        return;
+      }
+
+      // Notify passenger of new bid
+      const { data: ride } = await supabase
+        .from('rides')
+        .select('passenger_id')
+        .eq('id', rideId)
+        .single();
+
+      if (ride) {
+        socket.to(`user:${ride.passenger_id}`).emit('bid:new', {
+          bidId: bid.id,
+          rideId,
+          driverId: userId,
+          amount,
+          createdAt: bid.created_at
+        });
+      }
+
+      // Notify admin
+      socket.to('role:admin').emit('bid:new', {
+        bidId: bid.id,
+        rideId,
+        driverId: userId,
+        amount
+      });
+
+      socket.emit('bid:placed', { bidId: bid.id, bid });
+      logger.info('Bid placed by driver', { userId, rideId, amount });
+    } catch (error) {
+      logger.error('Failed to place bid:', error);
+      socket.emit('error', { message: 'Failed to place bid' });
+    }
+  });
+
+  // Accept bid (passenger)
+  socket.on('bid:accept', async (data: { bidId: string; rideId: string }) => {
+    try {
+      const { bidId, rideId } = data;
+
+      // Update bid status
+      const { data: bid, error: bidError } = await supabase
+        .from('bids')
+        .update({ status: 'accepted' })
+        .eq('id', bidId)
+        .select()
+        .single();
+
+      if (bidError || !bid) {
+        socket.emit('error', { message: 'Failed to accept bid' });
+        return;
+      }
+
+      // Update ride with accepted driver
+      await supabase
+        .from('rides')
+        .update({
+          driver_id: bid.driver_id,
+          status: 'accepted',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', rideId);
+
+      // Notify driver of accepted bid
+      socket.to(`user:${bid.driver_id}`).emit('bid:accepted', {
+        bidId,
+        rideId,
+        status: 'accepted'
+      });
+
+      // Notify admin
+      socket.to('role:admin').emit('bid:accepted', {
+        bidId,
+        rideId,
+        driverId: bid.driver_id
+      });
+
+      socket.emit('bid:accepted', { bidId, rideId });
+      logger.info('Bid accepted by passenger', { passengerId: userId, bidId, rideId });
+    } catch (error) {
+      logger.error('Failed to accept bid:', error);
+      socket.emit('error', { message: 'Failed to accept bid' });
     }
   });
 };
