@@ -181,9 +181,7 @@ app.get('/health', (_req, res) => {
 });
 
 // Swagger API Documentation (available in all environments)
-// Using a more Vercel-friendly setup for Swagger UI
-app.use('/api-docs', swaggerUi.serve);
-app.get('/api-docs', swaggerUi.setup(specs, swaggerUiOptions));
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, swaggerUiOptions));
 logger.info(`📚 API Documentation available at /api-docs`);
 
 // API routes
@@ -271,20 +269,6 @@ const startServer = async () => {
 // Only start the server if not running on Vercel (Vercel will call the handler)
 if (process.env['VERCEL'] !== '1') {
   startServer();
-} else {
-  // For Vercel: Initialize connections but don't listen
-  (async () => {
-    try {
-      const { error } = await supabase.from('users').select('id').limit(1);
-      if (error && !error.message.includes('JWT')) {
-        logger.error(`Supabase connection failed: ${error.message}`);
-      } else {
-        logger.info('✅ Supabase connection successful');
-      }
-    } catch (error) {
-      logger.error('Failed to initialize Supabase:', error);
-    }
-  })();
 }
 
 export { app, io };
