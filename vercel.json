@@ -10,5 +10,7 @@
   "routes": [
     { "src": "/(.*)", "dest": "api/index.js" }
   ],
-  "NODE_ENV": "production"
+  "env": {
+    "NODE_ENV": "production"
+  }
 }
