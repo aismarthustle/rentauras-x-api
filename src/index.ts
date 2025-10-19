@@ -26,8 +26,8 @@ import compression from 'compression';
 import { createServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 
-import redoc from 'redoc-express';
-import { specs } from '@/config/swagger-simple';
+import swaggerUi from 'swagger-ui-express';
+import { specs, swaggerUiOptions } from '@/config/swagger-simple';
 
 import { errorHandler } from '@/middleware/errorHandler';
 // import { rateLimiter } from '@/middleware/rateLimiter';
@@ -68,35 +68,7 @@ app.set('trust proxy', 1);
 
 // Security middleware
 app.use(helmet({
-  crossOriginResourcePolicy: { policy: "cross-origin" },
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: [
-        "'self'",
-        "'unsafe-inline'", // Required for Redoc inline scripts
-        "https://unpkg.com", // Required for Redoc CDN
-        "https://cdn.redoc.ly" // Alternative Redoc CDN
-      ],
-      styleSrc: [
-        "'self'",
-        "'unsafe-inline'", // Required for Redoc inline styles
-        "https://unpkg.com",
-        "https://cdn.redoc.ly",
-        "https://fonts.googleapis.com"
-      ],
-      fontSrc: [
-        "'self'",
-        "https://fonts.gstatic.com"
-      ],
-      imgSrc: [
-        "'self'",
-        "data:",
-        "https:"
-      ],
-      connectSrc: ["'self'"]
-    }
-  }
+  crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
 
 // CORS configuration
@@ -208,33 +180,10 @@ app.get('/health', (_req, res) => {
   });
 });
 
-// API Documentation with Redoc (serverless-friendly)
-app.get('/api-docs/swagger.json', (_req, res) => {
-  res.setHeader('Content-Type', 'application/json');
-  res.send(specs);
-});
-
-app.get('/api-docs', redoc({
-  title: 'Rentauras X API Documentation',
-  specUrl: '/api-docs/swagger.json',
-  redocOptions: {
-    theme: {
-      colors: {
-        primary: {
-          main: '#2c5aa0'
-        }
-      },
-      typography: {
-        fontSize: '15px',
-        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
-      }
-    },
-    hideDownloadButton: false,
-    disableSearch: false,
-    hideHostname: false
-  }
-}));
-
+// Swagger API Documentation (available in all environments)
+// Using a more Vercel-friendly setup for Swagger UI
+app.use('/api-docs', swaggerUi.serve);
+app.get('/api-docs', swaggerUi.setup(specs, swaggerUiOptions));
 logger.info(`📚 API Documentation available at /api-docs`);
 
 // API routes

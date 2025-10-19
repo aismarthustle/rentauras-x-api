@@ -160,5 +160,8 @@ export const swaggerUiOptions = {
     .swagger-ui .topbar { display: none }
     .swagger-ui .info .title { color: #2c5aa0 }
   `,
-  customSiteTitle: 'Rentauras X API Documentation'
+  customSiteTitle: 'Rentauras X API Documentation',
+  swaggerOptions: {
+    persistAuthorization: true,
+  }
 };
