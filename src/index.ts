@@ -1,4 +1,20 @@
-// Load environment variables FIRST before any other imports
+// Register module aliases FIRST before any other imports
+import moduleAlias from 'module-alias';
+moduleAlias.addAliases({
+  '@': __dirname,
+  '@/config': `${__dirname}/config`,
+  '@/contexts': `${__dirname}/contexts`,
+  '@/controllers': `${__dirname}/controllers`,
+  '@/lib': `${__dirname}/lib`,
+  '@/middleware': `${__dirname}/middleware`,
+  '@/models': `${__dirname}/models`,
+  '@/routes': `${__dirname}/routes`,
+  '@/services': `${__dirname}/services`,
+  '@/utils': `${__dirname}/utils`,
+  '@/types': `${__dirname}/types`
+});
+
+// Load environment variables
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -80,6 +96,55 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 /**
  * @swagger
+ * /:
+ *   get:
+ *     summary: API root endpoint
+ *     description: Welcome endpoint with API information
+ *     tags: [System]
+ *     responses:
+ *       200:
+ *         description: API information
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 version:
+ *                   type: string
+ *                 apiBaseUrl:
+ *                   type: string
+ *                 documentation:
+ *                   type: string
+ *                 healthCheck:
+ *                   type: string
+ */
+app.get('/', (_req, res) => {
+  res.status(200).json({
+    message: 'Welcome to Rentauras X Backend API',
+    version: process.env['npm_package_version'] || '1.0.0',
+    apiBaseUrl: `/api/${API_VERSION}`,
+    documentation: '/api-docs',
+    healthCheck: '/health',
+    endpoints: {
+      auth: `/api/${API_VERSION}/auth`,
+      users: `/api/${API_VERSION}/users`,
+      rides: `/api/${API_VERSION}/rides`,
+      vehicles: `/api/${API_VERSION}/vehicles`,
+      payments: `/api/${API_VERSION}/payments`,
+      notifications: `/api/${API_VERSION}/notifications`,
+      drivers: `/api/${API_VERSION}/drivers`,
+      wallet: `/api/${API_VERSION}/wallet`,
+      bids: `/api/${API_VERSION}/bids`,
+      admin: `/api/${API_VERSION}/admin`,
+      maps: `/api/${API_VERSION}/maps`
+    }
+  });
+});
+
+/**
+ * @swagger
  * /health:
  *   get:
  *     summary: Health check endpoint
@@ -115,11 +180,9 @@ app.get('/health', (_req, res) => {
   });
 });
 
-// Swagger API Documentation
-if (process.env['NODE_ENV'] !== 'production') {
-  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, swaggerUiOptions));
-  logger.info(`📚 API Documentation: http://localhost:${PORT}/api-docs`);
-}
+// Swagger API Documentation (available in all environments)
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, swaggerUiOptions));
+logger.info(`📚 API Documentation available at /api-docs`);
 
 // API routes
 app.use(`/api/${API_VERSION}/auth`, authRoutes);
@@ -203,6 +266,10 @@ const startServer = async () => {
   }
 };
 
-startServer();
+// Only start the server if not running on Vercel (Vercel will call the handler)
+if (process.env['VERCEL'] !== '1') {
+  startServer();
+}
 
 export { app, io };
+export default app;

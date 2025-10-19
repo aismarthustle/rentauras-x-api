@@ -8,11 +8,40 @@
   ],
   "routes": [
     {
+      "src": "/api-docs/swagger-ui\\.js",
+      "dest": "dist/index.js",
+      "headers": {
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "src": "/api-docs/swagger-ui-bundle\\.js",
+      "dest": "dist/index.js",
+      "headers": {
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "src": "/api-docs/swagger-ui-standalone-preset\\.js",
+      "dest": "dist/index.js",
+      "headers": {
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "src": "/api-docs/swagger-ui\\.css",
+      "dest": "dist/index.js",
+      "headers": {
+        "Content-Type": "text/css; charset=utf-8"
+      }
+    },
+    {
+      "src": "/api-docs/.*",
+      "dest": "dist/index.js"
+    },
+    {
       "src": "/(.*)",
       "dest": "dist/index.js"
     }
-  ],
-  "env": {
-    "NODE_ENV": "production"
-  }
+  ]
 }

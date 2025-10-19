@@ -40,8 +40,9 @@ export const logger = winston.createLogger({
   ]
 });
 
-// Add file transports for production
-if (nodeEnv === 'production') {
+// Add file transports for production (but not on Vercel/serverless)
+// Vercel doesn't allow writing to the filesystem
+if (nodeEnv === 'production' && !process.env['VERCEL']) {
   logger.add(
     new winston.transports.File({
       filename: 'logs/error.log',
@@ -50,7 +51,7 @@ if (nodeEnv === 'production') {
       maxFiles: 5
     })
   );
-  
+
   logger.add(
     new winston.transports.File({
       filename: 'logs/combined.log',
