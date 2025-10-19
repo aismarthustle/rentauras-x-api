@@ -26,8 +26,8 @@ import compression from 'compression';
 import { createServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 
-import swaggerUi from 'swagger-ui-express';
-import { specs, swaggerUiOptions } from '@/config/swagger-simple';
+import redoc from 'redoc-express';
+import { specs } from '@/config/swagger-simple';
 
 import { errorHandler } from '@/middleware/errorHandler';
 // import { rateLimiter } from '@/middleware/rateLimiter';
@@ -180,8 +180,33 @@ app.get('/health', (_req, res) => {
   });
 });
 
-// Swagger API Documentation (available in all environments)
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, swaggerUiOptions));
+// API Documentation with Redoc (serverless-friendly)
+app.get('/api-docs/swagger.json', (_req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.send(specs);
+});
+
+app.get('/api-docs', redoc({
+  title: 'Rentauras X API Documentation',
+  specUrl: '/api-docs/swagger.json',
+  redocOptions: {
+    theme: {
+      colors: {
+        primary: {
+          main: '#2c5aa0'
+        }
+      },
+      typography: {
+        fontSize: '15px',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
+      }
+    },
+    hideDownloadButton: false,
+    disableSearch: false,
+    hideHostname: false
+  }
+}));
+
 logger.info(`📚 API Documentation available at /api-docs`);
 
 // API routes
