@@ -1,6 +1,3 @@
-# Source files (we only need the compiled dist/)
-src/
-
 # Documentation
 *.md
 !README.md
