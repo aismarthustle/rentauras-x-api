@@ -271,5 +271,10 @@ if (process.env['VERCEL'] !== '1') {
   startServer();
 }
 
+// Vercel Serverless Function handler: delegate to Express app
+const handler = (req: any, res: any) => {
+  return (app as any)(req, res);
+};
+
 export { app, io };
-export default app;
+export default handler;
