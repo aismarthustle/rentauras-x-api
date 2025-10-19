@@ -68,7 +68,35 @@ app.set('trust proxy', 1);
 
 // Security middleware
 app.use(helmet({
-  crossOriginResourcePolicy: { policy: "cross-origin" }
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: [
+        "'self'",
+        "'unsafe-inline'", // Required for Redoc inline scripts
+        "https://unpkg.com", // Required for Redoc CDN
+        "https://cdn.redoc.ly" // Alternative Redoc CDN
+      ],
+      styleSrc: [
+        "'self'",
+        "'unsafe-inline'", // Required for Redoc inline styles
+        "https://unpkg.com",
+        "https://cdn.redoc.ly",
+        "https://fonts.googleapis.com"
+      ],
+      fontSrc: [
+        "'self'",
+        "https://fonts.gstatic.com"
+      ],
+      imgSrc: [
+        "'self'",
+        "data:",
+        "https:"
+      ],
+      connectSrc: ["'self'"]
+    }
+  }
 }));
 
 // CORS configuration
